@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일본어 작문 레벨 평가</title>
+<style>
+  :root {
+    --ink: #1a1d24;
+    --sub: #5a6070;
+    --line: #e3e5ea;
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --accent: #2f5d8a;
+    --accent-soft: #e8f0f8;
+    --good: #1f7a4d;
+    --warn: #b3541e;
+    --bad: #b3372e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Yu Gothic", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.65;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.app { text-align: center; margin-bottom: 28px; position: relative; }
+  a.admin-link {
+    position: fixed; top: 14px; right: 16px; font-size: 0.78rem; color: var(--sub);
+    text-decoration: none; opacity: 0.55; padding: 4px 8px; border-radius: 6px;
+  }
+  a.admin-link:hover { opacity: 1; background: var(--accent-soft); color: var(--accent); }
+  @media print { a.admin-link { display: none; } }
+  header.app h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
+  header.app p { color: var(--sub); font-size: 0.9rem; margin-top: 4px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 28px; margin-bottom: 18px;
+  }
+  .card h2 { font-size: 1.05rem; margin-bottom: 14px; }
+  label { display: block; font-size: 0.85rem; color: var(--sub); margin: 14px 0 5px; }
+  input[type="text"], input[type="password"], textarea {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 1rem; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  textarea { min-height: 140px; resize: vertical; font-size: 1.1rem; line-height: 1.8; }
+  button {
+    font-family: inherit; font-size: 0.95rem; border: none; border-radius: 8px;
+    padding: 12px 22px; cursor: pointer; font-weight: 600;
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: #264d73; }
+  button.primary:disabled { background: #9db3c8; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btnrow { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .hint { font-size: 0.8rem; color: var(--sub); margin-top: 6px; }
+  .error-box {
+    background: #fdf0ef; border: 1px solid #efc7c3; color: var(--bad);
+    padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; margin-top: 14px; display: none;
+  }
+  /* progress */
+  .progress { display: flex; gap: 8px; margin-bottom: 18px; }
+  .progress .step {
+    flex: 1; height: 6px; border-radius: 3px; background: var(--line);
+  }
+  .progress .step.done { background: var(--accent); }
+  .progress .step.now { background: #7ea4c7; }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.85rem; color: var(--sub); }
+  .level-chip {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    border-radius: 20px; padding: 3px 14px; font-weight: 700; font-size: 0.85rem;
+  }
+  .task-box {
+    background: var(--accent-soft); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  .task-box .jp { font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; }
+  .task-box .ko { font-size: 0.88rem; color: var(--sub); }
+  .charcount { text-align: right; font-size: 0.78rem; color: var(--sub); margin-top: 4px; }
+  /* spinner */
+  .loading { display: none; align-items: center; gap: 10px; margin-top: 16px; color: var(--sub); font-size: 0.9rem; }
+  .spinner {
+    width: 18px; height: 18px; border: 3px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* feedback */
+  .fb-score { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+  .fb-score.good { color: var(--good); } .fb-score.mid { color: var(--warn); } .fb-score.low { color: var(--bad); }
+  .fb-comment { font-size: 0.92rem; margin-bottom: 14px; }
+  table.fb-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 8px; }
+  table.fb-table th, table.fb-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  table.fb-table th { background: var(--bg); font-weight: 600; white-space: nowrap; }
+  .no-errors { color: var(--good); font-size: 0.9rem; }
+  /* result */
+  .final-level { text-align: center; margin: 10px 0 20px; }
+  .final-level .big {
+    font-size: 3rem; font-weight: 800; color: var(--accent); letter-spacing: 1px;
+  }
+  .final-level .cap { color: var(--sub); font-size: 0.9rem; }
+  .result-section { margin-top: 20px; }
+  .result-section h3 { font-size: 0.95rem; margin-bottom: 8px; color: var(--accent); }
+  .result-section ul { padding-left: 20px; font-size: 0.92rem; }
+  .result-section li { margin-bottom: 4px; }
+  .round-summary td.lv { white-space: nowrap; }
+  /* print report */
+  #printReport { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printReport, #printReport * { visibility: visible; }
+    #printReport {
+      display: block; position: absolute; left: 0; top: 0; width: 100%;
+      background: #fff; color: #000; padding: 24px; font-size: 11pt;
+    }
+    #printReport h1 { font-size: 15pt; margin-bottom: 4px; }
+    #printReport .sub { font-size: 9pt; color: #444; margin-bottom: 14px; }
+    #printReport h2 { font-size: 12pt; margin: 14px 0 6px; }
+    #printReport table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    #printReport th, #printReport td { border: 1px solid #999; padding: 5px 7px; text-align: left; vertical-align: top; }
+    #printReport ul { padding-left: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <h1>일본어 작문 레벨 평가</h1>
+    <p>작문 5문항으로 JLPT 기준 레벨(N5~N1)을 진단합니다</p>
+  </header>
+  <a href="settings.html" class="admin-link" title="관리자 설정 (모델·API 키)">⚙ 설정</a>
+
+  <!-- ========== 화면 1: 설정 ========== -->
+  <section id="screen-setup" class="card">
+    <h2>시작하기</h2>
+    <label for="inpName">이름</label>
+    <input type="text" id="inpName" placeholder="홍길동" autocomplete="off">
+    <label for="inpSid">학번</label>
+    <input type="text" id="inpSid" placeholder="20250000" autocomplete="off">
+    <div id="keyField">
+      <label for="inpKey">접속 코드 (API 키)</label>
+      <input type="password" id="inpKey" placeholder="수업 시간에 배부된 코드를 붙여넣으세요" autocomplete="off">
+    </div>
+    <p class="hint" id="setupHint">접속 코드는 이 브라우저에만 저장되며 외부로 전송되지 않습니다. 평가에는 5~10분 정도 걸립니다.</p>
+    <div class="error-box" id="setupError"></div>
+    <div class="btnrow">
+      <button class="primary" id="btnStart">평가 시작</button>
+    </div>
+  </section>
+
+  <!-- ========== 화면 2: 평가 ========== -->
+  <section id="screen-test" class="card" style="display:none">
+    <div class="progress" id="progressBar"></div>
+    <div class="meta-row">
+      <span id="roundLabel">문제 1 / 5</span>
+      <span class="level-chip" id="levelChip">N4 수준</span>
+    </div>
+    <div class="task-box">
+      <div class="jp" id="taskJp"></div>
+      <div class="ko" id="taskKo"></div>
+    </div>
+    <textarea id="answerBox" placeholder="ここに日本語で書いてください。" lang="ja"></textarea>
+    <div class="charcount"><span id="charCount">0</span>자</div>
+    <div class="error-box" id="testError"></div>
+    <div class="loading" id="loadingBox"><div class="spinner"></div><span>AI가 작문을 채점하고 있습니다…</span></div>
+    <div class="btnrow">
+      <button class="primary" id="btnSubmit">제출하고 채점받기</button>
+    </div>
+  </section>
+
+  <!-- ========== 화면 2.5: 문항별 피드백 ========== -->
+  <section id="screen-feedback" class="card" style="display:none">
+    <div class="meta-row">
+      <span id="fbRoundLabel"></span>
+      <span class="level-chip" id="fbLevelChip"></span>
+    </div>
+    <div class="fb-score" id="fbScore"></div>
+    <div class="fb-comment" id="fbComment"></div>
+    <div id="fbErrors"></div>
+    <div class="loading" id="finalLoading"><div class="spinner"></div><span>전체 결과를 분석하고 있습니다…</span></div>
+    <div class="btnrow">
+      <button class="primary" id="btnNext">다음 문제</button>
+    </div>
+  </section>
+
+  <!-- ========== 화면 3: 최종 결과 ========== -->
+  <section id="screen-result" class="card" style="display:none">
+    <h2>평가 결과</h2>
+    <div class="final-level">
+      <div class="big" id="resLevel">N3</div>
+      <div class="cap">JLPT 기준 추정 레벨</div>
+    </div>
+    <div class="fb-comment" id="resRationale"></div>
+
+    <div class="result-section">
+      <h3>문항별 요약</h3>
+      <table class="fb-table round-summary" id="resRounds"></table>
+    </div>
+    <div class="result-section">
+      <h3>잘한 점</h3>
+      <ul id="resStrengths"></ul>
+    </div>
+    <div class="result-section">
+      <h3>보완할 점</h3>
+      <ul id="resWeaknesses"></ul>
+    </div>
+    <div class="result-section">
+      <h3>학습 조언</h3>
+      <div class="fb-comment" id="resAdvice"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="primary" id="btnPrint">결과지 인쇄 / PDF 저장</button>
+      <button class="ghost" id="btnTxt">텍스트 파일 다운로드</button>
+      <button class="ghost" id="btnRestart">처음부터 다시</button>
+    </div>
+    <p class="hint" id="sheetStatus"></p>
+    <p class="hint">PDF로 저장한 결과지를 LMS 과제함에 제출하세요.</p>
+  </section>
+</div>
+
+<!-- 인쇄용 결과지 -->
+<div id="printReport"></div>
+
+<script src=".env"></script>
+<script>
+"use strict";
+
+/* ===================== 설정 =====================
+   모델과 API 키는 .env 파일에서 불러옵니다.
+   .env가 없거나 값이 비어 있으면 아래 기본값을 사용합니다.
+   설정은 settings.html 페이지(우측 상단 "⚙ 설정" 링크)에서 편집할 수 있습니다. */
+const MODEL = window.OPENROUTER_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const EMBEDDED_KEY = window.OPENROUTER_API_KEY || "";
+
+/* 구글시트 자동 전송 (선택 기능)
+   설정 방법은 같은 폴더의 「구글시트연동_설정법.md」를 참고하세요.
+   아래 따옴표 안에 Apps Script 웹 앱 URL을 붙여넣으면 활성화됩니다.
+   비워두면 자동 전송 없이 동작합니다. */
+const SHEET_URL = "";
+const TOTAL_ROUNDS = 5;
+const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+
+/* 레벨별 작문 과제 은행 (인덱스 0=N5 … 4=N1) */
+const TASK_BANK = [
+  [ // N5
+    { jp: "まいにちの せいかつについて、にほんごで 2ぶん かいてください。（です・ます체 사용）", ko: "매일의 생활(일과)에 대해 「~ます」형을 사용해 두 문장을 쓰세요. 예: 일어나는 시간, 하는 일 등" },
+    { jp: "すきな たべものを しょうかいしてください。（2ぶん いじょう）", ko: "좋아하는 음식을 소개하는 문장을 두 문장 이상 쓰세요. 「すきです」「よく たべます」 등을 활용해 보세요." },
+    { jp: "じこしょうかいを 2ぶん かいてください。", ko: "자기소개를 두 문장 쓰세요. 이름·전공·취미 중 두 가지 이상을 포함하세요." },
+    { jp: "かぞくを しょうかいしてください。「〜がいます」「〜は…です」を つかうこと。（2ぶん いじょう）", ko: "가족을 소개하는 문장을 「〜がいます」「〜は…です」를 사용해 두 문장 이상 쓰세요." },
+    { jp: "じぶんの へやに あるものを かいてください。「〜があります」を つかうこと。（2ぶん いじょう）", ko: "자기 방에 있는 물건을 「〜があります」를 사용해 두 문장 이상 쓰세요. (생물이면 「います」를 쓰는 것에 주의)" },
+    { jp: "しゅうまつに なにを しますか。2ぶん かいてください。「〜をします」「〜へいきます」を つかうこと。", ko: "주말에 무엇을 하는지 「〜をします」「〜へいきます」를 사용해 두 문장을 쓰세요." }
+  ],
+  [ // N4
+    { jp: "先週末に したことを 3文 書いてください。（過去形を使うこと）", ko: "지난 주말에 한 일을 과거형(〜ました / 〜ませんでした)을 사용해 세 문장으로 쓰세요." },
+    { jp: "休みに したいことを 書いてください。「〜たいです」「〜に行きます」を使うこと。", ko: "방학(휴가)에 하고 싶은 일을 「〜たいです」「〜に行きます」를 사용해 두세 문장으로 쓰세요." },
+    { jp: "友だちを 食事に さそう メッセージを 書いてください。「〜ませんか」「〜ましょう」を使うこと。", ko: "친구를 식사에 초대하는 메시지를 「〜ませんか」「〜ましょう」를 사용해 쓰세요." },
+    { jp: "今 住んでいる 町を しょうかいしてください。「〜くて」「〜で」の 連結形を 使って、3文 書くこと。", ko: "지금 살고 있는 동네를 소개하세요. 형용사 연결형(〜くて / 〜で)을 사용해 세 문장으로 쓰세요." },
+    { jp: "朝 何を しますか。「〜ながら」か「〜てから」を 使って、2〜3文 書いてください。", ko: "아침에 무엇을 하는지 「〜ながら」 또는 「〜てから」를 사용해 두세 문장으로 쓰세요." },
+    { jp: "休みの日に することを、「〜たり〜たりします」を 使って 書いてください。（2文 いじょう）", ko: "쉬는 날에 하는 일들을 「〜たり〜たりします」를 사용해 두 문장 이상 쓰세요." }
+  ],
+  [ // N3
+    { jp: "最近聞いたニュースや話を、「〜そうです（伝聞）」か「〜らしいです」を使って3〜4文で書いてください。", ko: "최근에 들은 소식이나 이야기를 전문(伝聞) 표현 「〜そうです」 또는 「〜らしいです」를 사용해 서너 문장으로 쓰세요." },
+    { jp: "日本語が上手になりたい友だちに、「〜たら」「〜ば」などの条件表現を使ってアドバイスを3文以上書いてください。", ko: "일본어를 잘하고 싶어 하는 친구에게 조건 표현(〜たら / 〜ば 등)을 사용해 조언을 세 문장 이상 쓰세요." },
+    { jp: "自分の経験について、「〜たことがあります」「〜ようになりました」を使って3〜4文で書いてください。", ko: "자신의 경험을 「〜たことがあります」「〜ようになりました」를 사용해 서너 문장으로 쓰세요." },
+    { jp: "自分がよく使う物について、「〜すぎる」「〜やすい／〜にくい」を使って3文以上で評価してください。", ko: "자신이 자주 쓰는 물건(스마트폰, 가방 등)을 「〜すぎる」「〜やすい/にくい」를 사용해 세 문장 이상으로 평가하세요." },
+    { jp: "旅行の準備や失敗の経験について、「〜ておく」「〜てしまう」を使って3〜4文で書いてください。", ko: "여행 준비나 실수했던 경험을 「〜ておく」「〜てしまう」를 사용해 서너 문장으로 쓰세요." },
+    { jp: "困った経験について、受身形（〜られる）を使って3文以上で書いてください。（例：雨に降られた、財布を盗まれた）", ko: "곤란했던 경험을 수동형(〜られる)을 사용해 세 문장 이상으로 쓰세요. 예: 비를 맞았다, 지갑을 도둑맞았다 등" }
+  ],
+  [ // N2
+    { jp: "「スマートフォンは生活を便利にしたが、問題もある」というテーマで、自分の意見を4〜5文で書いてください。「〜わけではない」「〜に違いない」などの表現を少なくとも一つ使うこと。", ko: "'스마트폰은 생활을 편리하게 했지만 문제도 있다'라는 주제로 자신의 의견을 4~5문장으로 쓰세요. 「〜わけではない」「〜に違いない」 등의 N2 문형을 하나 이상 사용하세요." },
+    { jp: "先生に提出物の締め切りを延ばしてもらいたいと頼むメールの本文を、敬語（尊敬語・謙譲語）を使って書いてください。", ko: "선생님께 제출 기한 연장을 부탁하는 메일 본문을 경어(존경어·겸양어)를 사용해 쓰세요." },
+    { jp: "最近の社会の変化について、「〜つつある」「〜一方だ」などの表現を使って4文程度で書いてください。", ko: "최근의 사회 변화에 대해 「〜つつある」「〜一方だ」 등의 표현을 사용해 네 문장 정도로 쓰세요." },
+    { jp: "最近見たニュースを、「〜によると〜そうだ」「〜恐れがある」を使って4文程度で要約してください。", ko: "최근 본 뉴스를 「〜によると〜そうだ」「〜恐れがある」를 사용해 네 문장 정도로 요약하세요." },
+    { jp: "韓国と日本の文化や習慣を、「〜ばかりでなく」「〜に対して」を使って4〜5文で比較してください。", ko: "한국과 일본의 문화·습관을 「〜ばかりでなく」「〜に対して」를 사용해 4~5문장으로 비교하세요." },
+    { jp: "健康のために心がけていることを、使役形か「〜ようにしている」を使って4文程度で書いてください。", ko: "건강을 위해 신경 쓰고 있는 것을 사역형 또는 「〜ようにしている」를 사용해 네 문장 정도로 쓰세요." }
+  ],
+  [ // N1
+    { jp: "「AI技術の発展は人間の仕事を奪うか」について、「〜ざるを得ない」「〜を余儀なくされる」などの書き言葉的表現を用いて、自分の見解を5文程度で論じてください。", ko: "'AI 기술의 발전은 인간의 일자리를 빼앗는가'에 대해 문어체 표현(〜ざるを得ない / 〜を余儀なくされる 등)을 사용해 다섯 문장 정도로 견해를 논술하세요." },
+    { jp: "現代社会における「豊かさ」とは何かについて、200字程度で自分の考えを述べてください。N1レベルの文型を2つ以上使うこと。", ko: "현대 사회에서 '풍요로움'이란 무엇인지 200자 정도로 서술하세요. N1 수준 문형을 두 개 이상 사용하세요." },
+    { jp: "「若者の読書離れ」という現象について、「〜んばかり」「〜べからざる」「〜を禁じ得ない」などの表現から2つ以上を用いて短い論評を書いてください。", ko: "'젊은 층의 독서 기피' 현상에 대해 제시된 N1 문형 중 두 개 이상을 사용해 짧은 논평을 쓰세요." },
+    { jp: "「学歴社会は変わりつつある」という通念について、「〜とはいえ」「〜ものの」を使って賛成か反対の立場から5文程度で論じてください。", ko: "'학벌 사회는 변하고 있다'는 통념에 대해 「〜とはいえ」「〜ものの」를 사용해 찬성 또는 반대 입장에서 다섯 문장 정도로 논하세요." },
+    { jp: "外国語教育の低年齢化について、「〜に越したことはない」「〜きらいがある」などの表現を使って自分の見解を5文程度で述べてください。", ko: "외국어 교육의 저연령화에 대해 「〜に越したことはない」「〜きらいがある」 등을 사용해 견해를 다섯 문장 정도로 서술하세요." },
+    { jp: "「都会であれ田舎であれ、住めば都だ」という言葉について、「〜であれ〜であれ」「〜をもって」などの表現を使い、格式のある文体で短い意見文を書いてください。", ko: "'도시든 시골이든 정들면 고향'이라는 말에 대해 「〜であれ〜であれ」「〜をもって」 등을 사용해 격식 있는 문체로 짧은 의견문을 쓰세요." }
+  ]
+];
+
+/* ===================== 채점 스키마 ===================== */
+const GRADE_SCHEMA = {
+  type: "object",
+  properties: {
+    score: { type: "integer", description: "0에서 100 사이의 점수. 과제 달성도·문법 정확성·해당 레벨 적합성을 종합." },
+    task_achievement: { type: "string", enum: ["good", "partial", "poor"], description: "과제 요구사항(지정 문형 사용, 문장 수 등) 달성 여부" },
+    errors: {
+      type: "array",
+      description: "문법·표기·어휘 오류 목록. 오류가 없으면 빈 배열.",
+      items: {
+        type: "object",
+        properties: {
+          original: { type: "string", description: "학생이 쓴 오류 부분 (원문 그대로)" },
+          corrected: { type: "string", description: "교정된 올바른 표현" },
+          explanation_ko: { type: "string", description: "왜 틀렸는지 한국어로 간단히 설명" }
+        },
+        required: ["original", "corrected", "explanation_ko"],
+        additionalProperties: false
+      }
+    },
+    level_estimate: { type: "string", enum: ["N5", "N4", "N3", "N2", "N1"], description: "이 답안만으로 추정되는 학습자의 JLPT 레벨" },
+    comment_ko: { type: "string", description: "학생에게 보여줄 한 두 문장의 한국어 총평" }
+  },
+  required: ["score", "task_achievement", "errors", "level_estimate", "comment_ko"],
+  additionalProperties: false
+};
+
+const FINAL_SCHEMA = {
+  type: "object",
+  properties: {
+    final_level: { type: "string", enum: ["N5", "N4", "N3", "N2", "N1"], description: "5개 답안을 종합한 최종 JLPT 추정 레벨" },
+    rationale_ko: { type: "string", description: "판정 근거를 학생에게 설명하는 한국어 2~3문장" },
+    strengths: { type: "array", items: { type: "string" }, description: "잘한 점 (한국어, 2~4개)" },
+    weaknesses: { type: "array", items: { type: "string" }, description: "보완할 점 (한국어, 2~4개)" },
+    study_points: { type: "array", items: { type: "string" }, description: "우선 학습할 문법 항목 (예: 조건 표현 〜ば/〜たら 구분)" },
+    advice_ko: { type: "string", description: "다음 단계 학습 조언 (한국어, 3~4문장)" }
+  },
+  required: ["final_level", "rationale_ko", "strengths", "weaknesses", "study_points", "advice_ko"],
+  additionalProperties: false
+};
+
+/* ===================== 상태 ===================== */
+const state = {
+  name: "", sid: "", key: "",
+  round: 0,           // 0-based
+  levelIdx: 1,        // 시작 레벨 N4
+  rounds: [],         // {levelIdx, task, answer, grade}
+  final: null
+};
+
+/* ===================== API 호출 ===================== */
+async function callLLM(systemPrompt, userText, schema) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + state.key
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userText }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "result", strict: true, schema: schema }
+      }
+    })
+  });
+
+  if (!res.ok) {
+    let msg = "요청에 실패했습니다 (HTTP " + res.status + ")";
+    try {
+      const err = await res.json();
+      const apiMsg = (err && err.error && err.error.message) ? err.error.message : "";
+      if (res.status === 401) msg = "접속 코드(API 키)가 올바르지 않거나 만료되었습니다. 선생님께 문의하세요.";
+      else if (res.status === 402) msg = "접속 코드의 사용 한도(크레딧)가 부족합니다. 선생님께 알려주세요.";
+      else if (res.status === 403) msg = "접속 코드(API 키)에 사용 권한이 없습니다. 다시 확인해 주세요.";
+      else if (res.status === 429) msg = "지금 요청이 많습니다. 30초 정도 기다렸다가 다시 제출해 주세요.";
+      else if (res.status >= 500) msg = "서버가 일시적으로 불안정합니다. 잠시 후 다시 제출해 주세요.";
+      else if (apiMsg) msg = "오류: " + apiMsg;
+    } catch (e) { /* json 파싱 실패 시 기본 메시지 유지 */ }
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  if (data.error) {
+    throw new Error("오류: " + (data.error.message || "알 수 없는 오류가 발생했습니다."));
+  }
+  const choice = data.choices && data.choices[0];
+  if (!choice || choice.finish_reason === "content_filter") {
+    throw new Error("답안을 평가할 수 없습니다. 과제와 관련된 내용으로 다시 작성해 주세요.");
+  }
+  const text = choice.message && choice.message.content;
+  if (!text) throw new Error("응답을 해석할 수 없습니다. 다시 제출해 주세요.");
+  return JSON.parse(text);
+}
+
+function gradeSystemPrompt(levelName, task) {
+  return [
+    "당신은 대학 일본어 교육 전문가이자 JLPT 작문 평가자입니다.",
+    "한국인 대학생이 쓴 일본어 작문을 채점합니다. 대상 레벨: " + levelName + ".",
+    "",
+    "과제: " + task.jp,
+    "과제 요구사항(한국어 안내): " + task.ko,
+    "",
+    "채점 기준:",
+    "- 과제의 요구사항(지정 문형, 문장 수)을 지켰는지",
+    "- 문법·활용·조사·표기의 정확성",
+    "- " + levelName + " 수준에 걸맞은 문형·어휘를 구사했는지",
+    "",
+    "주의사항:",
+    "- 답안이 일본어가 아니거나, 과제문을 그대로 베꼈거나, 무의미한 나열이면 score를 20 이하로 매기고 comment_ko에 이유를 쓰세요.",
+    "- 오류 교정은 학생이 쓴 표현을 최대한 살려서 최소한으로 고치세요.",
+    "- explanation_ko와 comment_ko는 반드시 한국어로, 대학생 학습자가 이해하기 쉽게 쓰세요.",
+    "- 잘 쓴 답안이라도 더 자연스러운 표현이 있으면 errors에 포함하되 explanation_ko에 '오류는 아니지만'이라고 밝히세요."
+  ].join("\n");
+}
+
+function finalSystemPrompt() {
+  return [
+    "당신은 대학 일본어 교육 전문가이자 JLPT 작문 평가자입니다.",
+    "한국인 대학생이 적응형 작문 평가에서 작성한 5개 답안과 문항별 채점 결과를 종합하여 최종 JLPT 레벨(N5~N1)을 판정합니다.",
+    "판정 원칙:",
+    "- 안정적으로 수행한 가장 높은 레벨을 기준으로 하되, 상위 레벨에서 부분 수행했다면 근거를 설명하세요.",
+    "- strengths/weaknesses/study_points는 답안에서 실제로 관찰된 것만 쓰세요.",
+    "- 모든 출력은 한국어로, 학생을 격려하는 어조로 쓰세요."
+  ].join("\n");
+}
+
+/* ===================== 화면 전환 유틸 ===================== */
+const $ = id => document.getElementById(id);
+function show(id) {
+  ["screen-setup", "screen-test", "screen-feedback", "screen-result"].forEach(s => {
+    $(s).style.display = (s === id) ? "" : "none";
+  });
+  window.scrollTo(0, 0);
+}
+function showError(boxId, msg) { const b = $(boxId); b.textContent = msg; b.style.display = "block"; }
+function hideError(boxId) { $(boxId).style.display = "none"; }
+
+function renderProgress() {
+  const bar = $("progressBar");
+  bar.innerHTML = "";
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    const d = document.createElement("div");
+    d.className = "step" + (i < state.round ? " done" : (i === state.round ? " now" : ""));
+    bar.appendChild(d);
+  }
+}
+
+/* ===================== 평가 진행 ===================== */
+function pickTask(levelIdx) {
+  const pool = TASK_BANK[levelIdx];
+  const used = state.rounds.filter(r => r.levelIdx === levelIdx).map(r => r.task.jp);
+  const fresh = pool.filter(t => !used.includes(t.jp));
+  const cands = fresh.length ? fresh : pool;
+  return cands[Math.floor(Math.random() * cands.length)];
+}
+
+function startRound() {
+  const task = pickTask(state.levelIdx);
+  state.currentTask = task;
+  renderProgress();
+  $("roundLabel").textContent = "문제 " + (state.round + 1) + " / " + TOTAL_ROUNDS;
+  $("levelChip").textContent = LEVELS[state.levelIdx] + " 수준";
+  $("taskJp").textContent = task.jp;
+  $("taskKo").textContent = task.ko;
+  $("answerBox").value = "";
+  $("charCount").textContent = "0";
+  hideError("testError");
+  $("btnSubmit").disabled = false;
+  $("loadingBox").style.display = "none";
+  show("screen-test");
+  $("answerBox").focus();
+}
+
+function hasJapanese(s) {
+  return /[぀-ヿ一-鿿]/.test(s);
+}
+
+async function submitAnswer() {
+  const answer = $("answerBox").value.trim();
+  hideError("testError");
+  if (answer.length < 5) { showError("testError", "답안이 너무 짧습니다. 과제 요구사항에 맞게 작성해 주세요."); return; }
+  if (!hasJapanese(answer)) { showError("testError", "일본어로 작성해 주세요. (히라가나·가타카나·한자가 포함되어야 합니다)"); return; }
+
+  $("btnSubmit").disabled = true;
+  $("loadingBox").style.display = "flex";
+
+  try {
+    const levelName = LEVELS[state.levelIdx];
+    const grade = await callLLM(
+      gradeSystemPrompt(levelName, state.currentTask),
+      "학생 답안:\n" + answer,
+      GRADE_SCHEMA
+    );
+    state.rounds.push({ levelIdx: state.levelIdx, task: state.currentTask, answer: answer, grade: grade });
+    showFeedback(grade);
+  } catch (e) {
+    showError("testError", e.message);
+    $("btnSubmit").disabled = false;
+    $("loadingBox").style.display = "none";
+  }
+}
+
+function showFeedback(grade) {
+  const r = state.rounds.length; // 방금 끝난 라운드 번호 (1-based)
+  $("fbRoundLabel").textContent = "문제 " + r + " 채점 결과";
+  $("fbLevelChip").textContent = LEVELS[state.levelIdx] + " 수준";
+
+  const sc = $("fbScore");
+  sc.textContent = grade.score + "점 / 100점";
+  sc.className = "fb-score " + (grade.score >= 75 ? "good" : grade.score >= 45 ? "mid" : "low");
+  $("fbComment").textContent = grade.comment_ko;
+
+  const errBox = $("fbErrors");
+  if (grade.errors.length === 0) {
+    errBox.innerHTML = '<p class="no-errors">교정할 오류가 없습니다. 훌륭합니다!</p>';
+  } else {
+    let html = '<table class="fb-table"><tr><th>내가 쓴 표현</th><th>교정</th><th>설명</th></tr>';
+    for (const e of grade.errors) {
+      html += "<tr><td>" + esc(e.original) + "</td><td>" + esc(e.corrected) + "</td><td>" + esc(e.explanation_ko) + "</td></tr>";
+    }
+    html += "</table>";
+    errBox.innerHTML = html;
+  }
+
+  $("btnNext").textContent = (state.round + 1 >= TOTAL_ROUNDS) ? "최종 결과 보기" : "다음 문제";
+  $("btnNext").disabled = false;
+  $("finalLoading").style.display = "none";
+  show("screen-feedback");
+}
+
+function adjustLevel(grade) {
+  if (grade.score >= 75 && grade.task_achievement === "good") {
+    state.levelIdx = Math.min(state.levelIdx + 1, LEVELS.length - 1);
+  } else if (grade.score < 45) {
+    state.levelIdx = Math.max(state.levelIdx - 1, 0);
+  }
+}
+
+async function nextStep() {
+  const lastGrade = state.rounds[state.rounds.length - 1].grade;
+  adjustLevel(lastGrade);
+  state.round += 1;
+  if (state.round < TOTAL_ROUNDS) {
+    startRound();
+  } else {
+    await finishTest();
+  }
+}
+
+async function finishTest() {
+  $("btnNext").disabled = true;
+  $("finalLoading").style.display = "flex";
+  try {
+    const summary = state.rounds.map((r, i) => {
+      return "【문제 " + (i + 1) + "】 레벨: " + LEVELS[r.levelIdx] +
+        "\n과제: " + r.task.jp +
+        "\n학생 답안: " + r.answer +
+        "\n점수: " + r.grade.score + " / 과제달성: " + r.grade.task_achievement +
+        " / 문항별 레벨 추정: " + r.grade.level_estimate +
+        "\n오류 수: " + r.grade.errors.length;
+    }).join("\n\n");
+    state.final = await callLLM(finalSystemPrompt(), summary, FINAL_SCHEMA);
+    showResult();
+  } catch (e) {
+    $("finalLoading").style.display = "none";
+    $("btnNext").disabled = false;
+    alert(e.message);
+  }
+}
+
+/* ===================== 결과 표시 ===================== */
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function roundsTableHtml() {
+  let html = "<tr><th>문제</th><th>레벨</th><th>점수</th><th>과제 달성</th><th>오류 수</th></tr>";
+  const ach = { good: "달성", partial: "부분 달성", poor: "미달성" };
+  state.rounds.forEach((r, i) => {
+    html += "<tr><td>" + (i + 1) + "</td><td class='lv'>" + LEVELS[r.levelIdx] + "</td><td>" +
+      r.grade.score + "</td><td>" + (ach[r.grade.task_achievement] || r.grade.task_achievement) +
+      "</td><td>" + r.grade.errors.length + "</td></tr>";
+  });
+  return html;
+}
+
+function showResult() {
+  const f = state.final;
+  $("resLevel").textContent = f.final_level;
+  $("resRationale").textContent = f.rationale_ko;
+  $("resRounds").innerHTML = roundsTableHtml();
+  $("resStrengths").innerHTML = f.strengths.map(s => "<li>" + esc(s) + "</li>").join("");
+  $("resWeaknesses").innerHTML = f.weaknesses.map(s => "<li>" + esc(s) + "</li>").join("");
+  $("resAdvice").innerHTML = esc(f.advice_ko) +
+    (f.study_points.length ? "<br><br><b>우선 학습 문법:</b> " + f.study_points.map(esc).join(" / ") : "");
+  buildPrintReport();
+  show("screen-result");
+  sendToSheet();
+}
+
+/* 구글시트 자동 전송 (SHEET_URL이 설정된 경우에만 동작) */
+async function sendToSheet() {
+  if (!SHEET_URL) return;
+  const st = $("sheetStatus");
+  st.textContent = "결과를 선생님 시트로 전송하는 중…";
+  const f = state.final;
+  const payload = {
+    name: state.name,
+    sid: state.sid,
+    final_level: f.final_level,
+    avg: Math.round(state.rounds.reduce((s, r) => s + r.grade.score, 0) / state.rounds.length),
+    rounds: state.rounds.map((r, i) => ({
+      no: i + 1, level: LEVELS[r.levelIdx], score: r.grade.score, errors: r.grade.errors.length
+    })),
+    rationale: f.rationale_ko
+  };
+  try {
+    await fetch(SHEET_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    st.textContent = "✓ 결과가 선생님 시트로 자동 전송되었습니다.";
+  } catch (e) {
+    st.textContent = "시트 자동 전송에 실패했습니다. 아래 PDF 결과지를 꼭 제출해 주세요.";
+  }
+}
+
+function buildPrintReport() {
+  const f = state.final;
+  const now = new Date();
+  const dateStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") +
+    " " + String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+
+  let errRows = "";
+  state.rounds.forEach((r, i) => {
+    r.grade.errors.forEach(e => {
+      errRows += "<tr><td>" + (i + 1) + "</td><td>" + esc(e.original) + "</td><td>" + esc(e.corrected) + "</td><td>" + esc(e.explanation_ko) + "</td></tr>";
+    });
+  });
+  const errTable = errRows
+    ? "<h2>오류 교정 내역</h2><table><tr><th>문제</th><th>원문</th><th>교정</th><th>설명</th></tr>" + errRows + "</table>"
+    : "";
+
+  $("printReport").innerHTML =
+    "<h1>일본어 작문 레벨 평가 결과지</h1>" +
+    "<div class='sub'>이름: " + esc(state.name) + " ｜ 학번: " + esc(state.sid) + " ｜ 평가일시: " + dateStr + "</div>" +
+    "<h2>최종 판정: " + esc(f.final_level) + "</h2>" +
+    "<p>" + esc(f.rationale_ko) + "</p>" +
+    "<h2>문항별 요약</h2><table>" + roundsTableHtml() + "</table>" +
+    errTable +
+    "<h2>잘한 점</h2><ul>" + f.strengths.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul>" +
+    "<h2>보완할 점</h2><ul>" + f.weaknesses.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul>" +
+    "<h2>우선 학습 문법</h2><ul>" + f.study_points.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul>" +
+    "<h2>학습 조언</h2><p>" + esc(f.advice_ko) + "</p>";
+}
+
+function downloadTxt() {
+  const f = state.final;
+  const lines = [];
+  lines.push("일본어 작문 레벨 평가 결과지");
+  lines.push("이름: " + state.name + " / 학번: " + state.sid + " / 평가일시: " + new Date().toLocaleString("ko-KR"));
+  lines.push("");
+  lines.push("[최종 판정] " + f.final_level);
+  lines.push(f.rationale_ko);
+  lines.push("");
+  lines.push("[문항별 요약]");
+  state.rounds.forEach((r, i) => {
+    lines.push("문제" + (i + 1) + " (" + LEVELS[r.levelIdx] + ") 점수 " + r.grade.score + " / 오류 " + r.grade.errors.length + "건");
+    lines.push("  과제: " + r.task.jp);
+    lines.push("  답안: " + r.answer);
+    r.grade.errors.forEach(e => lines.push("  - " + e.original + " → " + e.corrected + " (" + e.explanation_ko + ")"));
+  });
+  lines.push("");
+  lines.push("[잘한 점] " + f.strengths.join(" / "));
+  lines.push("[보완할 점] " + f.weaknesses.join(" / "));
+  lines.push("[우선 학습 문법] " + f.study_points.join(" / "));
+  lines.push("[학습 조언] " + f.advice_ko);
+
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "일본어작문평가_" + state.sid + "_" + state.name + ".txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ===================== 이벤트 ===================== */
+$("btnStart").addEventListener("click", () => {
+  const name = $("inpName").value.trim();
+  const sid = $("inpSid").value.trim();
+  const key = EMBEDDED_KEY || $("inpKey").value.trim();
+  hideError("setupError");
+  if (!name || !sid) { showError("setupError", "이름과 학번을 입력해 주세요."); return; }
+  if (!key) { showError("setupError", "접속 코드(API 키)를 입력해 주세요."); return; }
+  state.name = name; state.sid = sid; state.key = key;
+  try {
+    if (!EMBEDDED_KEY) localStorage.setItem("jwa_key", key);
+    localStorage.setItem("jwa_name", name); localStorage.setItem("jwa_sid", sid);
+  } catch (e) {}
+  state.round = 0; state.levelIdx = 1; state.rounds = []; state.final = null;
+  startRound();
+});
+
+$("btnSubmit").addEventListener("click", submitAnswer);
+$("btnNext").addEventListener("click", nextStep);
+$("btnPrint").addEventListener("click", () => window.print());
+$("btnTxt").addEventListener("click", downloadTxt);
+$("btnRestart").addEventListener("click", () => location.reload());
+$("answerBox").addEventListener("input", () => {
+  $("charCount").textContent = $("answerBox").value.length;
+});
+
+/* 키 내장 모드: 접속 코드 입력칸 숨김 (.env에 실제 키가 있을 때만) */
+if (EMBEDDED_KEY) {
+  $("keyField").style.display = "none";
+  $("setupHint").textContent = "이름과 학번을 입력하고 시작하세요. 평가에는 5~10분 정도 걸립니다.";
+}
+
+/* 저장된 값 복원 */
+try {
+  if (!EMBEDDED_KEY && localStorage.getItem("jwa_key")) $("inpKey").value = localStorage.getItem("jwa_key");
+  if (localStorage.getItem("jwa_name")) $("inpName").value = localStorage.getItem("jwa_name");
+  if (localStorage.getItem("jwa_sid")) $("inpSid").value = localStorage.getItem("jwa_sid");
+} catch (e) {}
+</script>
+</body>
+</html>
